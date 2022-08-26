@@ -23,6 +23,7 @@ export class AuthService {
 
             // Ignore white-listed URLs
             if (ignoreUrls.some(url => request.url.toLowerCase().endsWith(url.toLowerCase()))) {
+                console.log("Allowing anonymous for URL", request.url);
                 next();
                 return;
             }

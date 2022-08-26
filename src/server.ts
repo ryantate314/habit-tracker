@@ -8,6 +8,7 @@ import { UsersController } from './controllers/users.controller';
 import { AppDAO } from './data/app-dao';
 import { UsersRepository } from './data/users.repository';
 import { HabitsRepository } from './data/habits.repository';
+import cors from 'cors';
 
 class Server {
     private app;
@@ -25,10 +26,13 @@ class Server {
     private config() {
         this.app.use(bodyParser.urlencoded({ extended:true }));
         this.app.use(bodyParser.json({ limit: '1mb' })); // 100kb default
+        this.app.use(cors({
+            origin: "http://localhost:4200"
+        }));
 
         if (this.environment.SECURE_ENDPOINTS != "false") {
             this.app.use(this.authService.routeGuard([
-                '/users/login'
+                '/api/v1/users/login'
             ]));
         }
     }
@@ -37,11 +41,11 @@ class Server {
         const userRepo = new UsersRepository(this.dao);
         const usersController = new UsersController(this.authService, userRepo);
 
-        this.app.post("/users/login", usersController.login);
+        this.app.post("/api/v1/users/login", usersController.login);
 
         const habitRepo = new HabitsRepository(this.dao);
         const habitsController = new HabitsController(habitRepo);
-        this.app.get("/habit-categories", habitsController.getCategories);
+        this.app.get("/api/v1/habit-categories", habitsController.getCategories);
     }
 
     public start = (port: number) => {

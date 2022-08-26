@@ -10,7 +10,7 @@ export class UsersController {
 
     public async login(request: Request, response: Response) {
         const { token } = request.body;
-        console.log("Validating login: " + token, this.authService);
+        console.log("Validating login:", token);
 
         let googleUser = null;
 
