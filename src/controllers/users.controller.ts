@@ -10,7 +10,7 @@ export class UsersController {
 
     public async login(request: Request, response: Response) {
         const { token } = request.body;
-        console.log("Validating login:", token);
+        console.log("Validating login");
 
         let googleUser = null;
 
@@ -25,6 +25,7 @@ export class UsersController {
 
         if (googleUser) {
             let user = await this.userRepo.getUserBySSOId(googleUser.ssoId);
+            console.log("Found user:", user);
             if (user == null) {
                 user = await this.userRepo.create({
                     email: googleUser.email!,
@@ -34,7 +35,10 @@ export class UsersController {
             const token = this.authService.generateToken({
                 userId: user.id!
             })
-            response.send(user);
+            response.send({
+                user: user,
+                token: token
+            });
         }
         else {
             response.status(401)

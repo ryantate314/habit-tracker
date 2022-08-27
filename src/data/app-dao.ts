@@ -58,14 +58,28 @@ export class AppDAO {
                 FOREIGN KEY FK_HabitId_Habit_HabitId (HabitId) REFERENCES Habit (HabitId)
             );
         `;
-        await this.run(sql);
+        await this.all(sql);
     }
 
-    public run(sql: string, params: string[] = []): Promise<RunResult> {
+    public all<TEntity>(sql: string, params: { [key: string]: string } = {}): Promise<TEntity[]> {
         return new Promise((resolve, reject) => {
-            this.db.run(sql, params, (result: RunResult, error: Error | null) => {
+            this.db.all(sql, params, (error, rows) => {
                 if (error == null) {
-                    resolve(result);
+                    resolve(rows as TEntity[]);
+                }
+                else {
+                    console.log("Error running SQL", error);
+                    reject(error);
+                }
+            });
+        });
+    }
+
+    public get<TEntity>(sql: string, params: { [key: string]: string } = {}): Promise<TEntity> {
+        return new Promise((resolve, reject) => {
+            this.db.get(sql, params, (error, row) => {
+                if (error == null) {
+                    resolve(row as TEntity);
                 }
                 else {
                     console.log("Error running SQL", error);

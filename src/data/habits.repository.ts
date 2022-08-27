@@ -34,18 +34,10 @@ export class HabitsRepository {
             FROM Habit H
                 JOIN User U
                     ON H.UserId = H.UserId
-            WHERE U.UserGuid = ?
+            WHERE U.UserGuid = $userId
                 AND H.IsDeleted = 0;
         `;
-        const result = await this.dao.run(sql, [userId]);
-        return new Promise((resolve, reject) => {
-            result.all((err, habits) => {
-                if (err)
-                    reject(err);
-                else
-                    resolve(habits);
-            });
-        });
+        return this.dao.all<DataHabit>(sql, { $userId: userId });
     }
 
     public async getCategories(userId: string): Promise<{ categories: HabitCategory[], habits: Habit[] }> {
@@ -65,18 +57,10 @@ export class HabitsRepository {
             FROM HabitCategory HC
                 JOIN User U
                     ON HC.UserId = U.UserId
-            WHERE U.UserGuid = ?
+            WHERE U.UserGuid = $userId
                 AND HC.IsDeleted = 0;
         `;
-        const result = await this.dao.run(sql, [userId]);
-        return new Promise((resolve, reject) => 
-            result.all((err, rows) => {
-                if (err)
-                    reject(err);
-                else
-                    resolve(rows);
-            })
-        );
+        return this.dao.all<DataHabitCategory>(sql, { $userId: userId });
     }
 
     private organizeCategories(categories: DataHabitCategory[], habits: DataHabit[]): { habits: Habit[], categories: HabitCategory[] } {
