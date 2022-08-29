@@ -59,7 +59,9 @@ export class AuthService {
     }
 
     public generateToken(payload: TokenPayload): string {
-        return jwt.sign(payload, this.JWT_KEY);
+        return jwt.sign(payload, this.JWT_KEY, {
+            expiresIn: 30 * 60
+        });
     }
 
     private parseToken(token: string) {

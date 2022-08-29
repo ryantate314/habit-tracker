@@ -64,7 +64,6 @@ export class HabitsRepository {
     }
 
     private organizeCategories(categories: DataHabitCategory[], habits: DataHabit[]): { habits: Habit[], categories: HabitCategory[] } {
-        
         const castCategories: HabitCategory[] = categories.map(x => ({
             id: x.guid,
             name: x.name,
@@ -72,6 +71,8 @@ export class HabitsRepository {
             subCategories: []
         }));
         const castCategoryDict: { [key: string]: HabitCategory } = {};
+        for (let category of castCategories)
+            castCategoryDict[category.id] = category;
 
         const guidMap: { [key: number]: string } = {};
         for (let category of categories) {

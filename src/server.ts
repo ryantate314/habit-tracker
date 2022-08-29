@@ -64,13 +64,13 @@ class Server {
         this.app.get("/api/v1/habit-categories", endpoint(habitsController.getCategories));
     }
 
-    public start = (port: number) => {
+    public start = async (port: number) => {
         return new Promise((resolve, reject) => {
             this.app.listen(port, () => {
                 resolve(port);
             }).on('error', (err: Object) => reject(err));
         })
-        .then(port => this.dao.initDatabase());
+        .then(_ => this.dao.initDatabase());
     }
 
 }
