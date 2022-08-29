@@ -33,6 +33,7 @@ export class AuthService {
                 try {
                     const parsedToken = <JwtPayload>this.parseToken(token);
                     if (parsedToken) {
+                        console.log("User " + parsedToken.userId + " authenticated");
                         request.user = {
                             id: parsedToken.userId
                         }
@@ -40,6 +41,7 @@ export class AuthService {
                     }
                 }
                 catch (ex) {
+                    console.log("Authenticateion error:", ex);
                 }
             }
             else

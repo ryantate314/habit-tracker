@@ -1,6 +1,8 @@
+import { Observable } from "rxjs";
 import { HabitInstance } from "../models/habit-instance.model";
 import { Habit, HabitCategory, RootCategory } from "../models/habit.model";
 import { AppDAO } from "./app-dao";
+import { v4 as newUUID} from 'uuid';
 
 interface DataHabitCategory {
     id: number;
@@ -17,6 +19,7 @@ interface DataHabit {
 }
 
 export class HabitsRepository {
+    
 
     constructor(private dao: AppDAO) {}
 
@@ -105,6 +108,27 @@ export class HabitsRepository {
         return {
             subCategories: rootCategories,
             habits: rootHabits
+        };
+    }
+
+    public async createHabit(habit: Habit): Promise<Habit> {
+        const sql = `
+            INSERT INTO Habit (
+                HabitGuid
+                , Name
+            )
+            VALUES (
+                $guid
+                , $name
+            )
+        `;
+        const uuid = newUUID();
+        console.log("Inserting habit");
+        await this.dao.run(sql, { "$guid": uuid, "$name": habit.name });
+        
+        return {
+            ...habit,
+            id: uuid
         };
     }
 }

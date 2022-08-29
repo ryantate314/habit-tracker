@@ -61,6 +61,7 @@ class Server {
         const habitRepo = new HabitsRepository(this.dao);
         const habitsController = new HabitsController(habitRepo);
         this.app.get("/api/v1/habit-categories", endpoint(habitsController.getCategories));
+        this.app.post("/api/v1/habits", endpoint(habitsController.createHabit));
     }
 
     public start = async (port: number) => {

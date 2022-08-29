@@ -75,9 +75,9 @@ export class AppDAO {
         await this.run(actionSql);
     }
 
-    public run(sql: string): Promise<void> {
+    public run(sql: string, params?: { [key: string]: string }): Promise<void> {
         return new Promise((resolve, reject) => {
-            this.db.run(sql, (err) => {
+            this.db.run(sql, params, (err) => {
                 if (err === null) {
                     resolve();
                 }

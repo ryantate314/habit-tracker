@@ -9,6 +9,7 @@ export class HabitsController {
     constructor(private habitRepo: HabitsRepository) {
         this.getCategories = this.getCategories.bind(this);
         this.get = this.get.bind(this);
+        this.createHabit = this.createHabit.bind(this);
     }
 
     public async getCategories(request: Request, response: Response): Promise<void> {
@@ -32,6 +33,21 @@ export class HabitsController {
         }
         catch (ex) {
             console.error("Error retrieving habit instances.", ex);
+            response.status(500)
+                .send();
+        }
+    }
+
+    public async createHabit(request: Request, response: Response): Promise<void> {
+
+        const habit: Habit = request.body;
+
+        try {
+            const newHabit = await this.habitRepo.createHabit(habit);
+            response.send(newHabit);
+        }
+        catch (ex) {
+            console.error("Error creating habit", ex);
             response.status(500)
                 .send();
         }
