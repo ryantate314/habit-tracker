@@ -59,7 +59,7 @@ export class AuthService {
     }
 
     public generateToken(payload: TokenPayload): string {
-        return jwt.sign({}, this.JWT_KEY);
+        return jwt.sign(payload, this.JWT_KEY);
     }
 
     private parseToken(token: string) {
