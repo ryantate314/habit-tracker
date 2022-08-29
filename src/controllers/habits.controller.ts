@@ -19,7 +19,7 @@ export class HabitsController {
             response.send(categories);
         }
         catch (ex) {
-            console.error("Error retrieving categories");
+            console.error("Error retrieving categories", ex);
             response.status(500)
                 .send();
         }

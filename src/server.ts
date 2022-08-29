@@ -14,7 +14,6 @@ import { handleErrors } from './errorHandler';
 function endpoint(action: RequestHandler): RequestHandler {
     return (req: Request, res: Response, next: NextFunction) => {
         try {
-            console.log("Executing action");
             action(req, res, next);
         }
         catch (ex) {

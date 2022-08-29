@@ -9,3 +9,8 @@ export interface Habit {
     id: string;
     name: string;
 }
+
+export interface RootCategory {
+    subCategories: HabitCategory[];
+    habits: Habit[];
+}

@@ -1,5 +1,5 @@
 import { HabitInstance } from "../models/habit-instance.model";
-import { Habit, HabitCategory } from "../models/habit.model";
+import { Habit, HabitCategory, RootCategory } from "../models/habit.model";
 import { AppDAO } from "./app-dao";
 
 interface DataHabitCategory {
@@ -40,7 +40,7 @@ export class HabitsRepository {
         return this.dao.all<DataHabit>(sql, { $userId: userId });
     }
 
-    public async getCategories(userId: string): Promise<{ categories: HabitCategory[], habits: Habit[] }> {
+    public async getCategories(userId: string): Promise<RootCategory> {
         const categories = await this.getCategories_(userId);
         const habits = await this.getHabits_(userId);
 
@@ -63,7 +63,7 @@ export class HabitsRepository {
         return this.dao.all<DataHabitCategory>(sql, { $userId: userId });
     }
 
-    private organizeCategories(categories: DataHabitCategory[], habits: DataHabit[]): { habits: Habit[], categories: HabitCategory[] } {
+    private organizeCategories(categories: DataHabitCategory[], habits: DataHabit[]): RootCategory {
         const castCategories: HabitCategory[] = categories.map(x => ({
             id: x.guid,
             name: x.name,
@@ -84,8 +84,9 @@ export class HabitsRepository {
         for (let category of categories) {
             if (category.parentId === null)
                 rootCategories.push(castCategoryDict[category.guid]);
-            else
+            else {
                 castCategoryDict[guidMap[category.parentId]].subCategories.push(castCategoryDict[category.guid])
+            }
         }
 
         const rootHabits: Habit[] = [];
@@ -102,7 +103,7 @@ export class HabitsRepository {
         }
 
         return {
-            categories: rootCategories,
+            subCategories: rootCategories,
             habits: rootHabits
         };
     }
