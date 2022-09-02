@@ -14,7 +14,7 @@ export class AppDAO {
         const userSql = `
             CREATE TABLE IF NOT EXISTS User (
                 UserId INTEGER PRIMARY KEY AUTOINCREMENT,
-                UserGuid UNIQUEIDENTIFIER NOT NULL,
+                UserGuid CHARACTER(36) NOT NULL UNIQUE,
                 Email VARCHAR(255) NOT NULL,
                 SSOId VARCHAR(100),
                 CreatedDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -26,7 +26,7 @@ export class AppDAO {
         const habitCategorySql = `
             CREATE TABLE IF NOT EXISTS HabitCategory (
                 HabitCategoryId INTEGER PRIMARY KEY AUTOINCREMENT,
-                HabitCategoryGuid UNIQUEIDENTIFIER NOT NULL,
+                HabitCategoryGuid CHARACTER(36) NOT NULL UNIQUE,
                 UserId INTEGER,
                 Name VARCHAR(255) NOT NULL,
                 Color VARCHAR(32) NULL,
@@ -45,7 +45,7 @@ export class AppDAO {
         const habitSql = `
             CREATE TABLE IF NOT EXISTS Habit (
                 HabitId INTEGER PRIMARY KEY AUTOINCREMENT,
-                HabitGuid UNIQUEIDENTIFIER NOT NULL,
+                HabitGuid CHARACTER(36) NOT NULL UNIQUE,
                 HabitCategoryId INTEGER,
                 UserId INTEGER,
                 Name VARCHAR(255) NOT NULL,
@@ -62,7 +62,7 @@ export class AppDAO {
         const actionSql = `
             CREATE TABLE IF NOT EXISTS Action (
                 ActionId INTEGER PRIMARY KEY AUTOINCREMENT,
-                ActionGuid UNIQUEIDENTIFIER NOT NULL,
+                ActionGuid CHARACTER(36) NOT NULL UNIQUE,
                 HabitId INTEGER NULL,
                 CustomName VARCHAR(255),
                 Notes VARCHAR(1024),

@@ -8,17 +8,18 @@ interface DataHabitCategory {
     id: number;
     guid: string;
     name: string;
-    parentId: number | null;
+    parentId: string | null
 }
 
 interface DataHabit {
     id: number;
     guid: string;
     name: string;
-    categoryId: number | null;
+    categoryId: string | null;
 }
 
 export class HabitsRepository {
+    
     
 
     constructor(private dao: AppDAO) {}
@@ -32,13 +33,17 @@ export class HabitsRepository {
             SELECT
                 H.HabitId AS id,
                 H.HabitGuid AS guid,
-                H.Name AS Name,
-                H.HabitCategoryId AS categoryId
+                H.Name AS name,
+                HC.HabitCategoryGuid AS categoryId
             FROM Habit H
                 JOIN User U
                     ON H.UserId = H.UserId
+                LEFT JOIN HabitCategory HC
+                    ON H.HabitCategoryId = HC.HabitCategoryId
+                        AND HC.IsDeleted = 0
             WHERE U.UserGuid = $userId
-                AND H.IsDeleted = 0;
+                AND H.IsDeleted = 0
+                AND U.IsDeleted = 0;
         `;
         return this.dao.all<DataHabit>(sql, { $userId: userId });
     }
@@ -56,12 +61,16 @@ export class HabitsRepository {
                 HC.HabitCategoryId AS id,
                 HC.HabitCategoryGuid AS guid,
                 HC.Name AS name,
-                HC.ParentCategoryId AS parentId
+                Parent.HabitCategoryGuid AS parentId
             FROM HabitCategory HC
                 JOIN User U
                     ON HC.UserId = U.UserId
+                LEFT JOIN HabitCategory Parent
+                    ON HC.ParentCategoryId = Parent.HabitCategoryId
+                        AND Parent.IsDeleted = 0
             WHERE U.UserGuid = $userId
-                AND HC.IsDeleted = 0;
+                AND HC.IsDeleted = 0
+                AND U.IsDeleted = 0;
         `;
         return this.dao.all<DataHabitCategory>(sql, { $userId: userId });
     }
@@ -70,6 +79,7 @@ export class HabitsRepository {
         const castCategories: HabitCategory[] = categories.map(x => ({
             id: x.guid,
             name: x.name,
+            parentCategoryId: x.parentId,
             habits: [],
             subCategories: []
         }));
@@ -77,10 +87,10 @@ export class HabitsRepository {
         for (let category of castCategories)
             castCategoryDict[category.id] = category;
 
-        const guidMap: { [key: number]: string } = {};
-        for (let category of categories) {
-            guidMap[category.id] = category.guid;
-        }
+        // const guidMap: { [key: number]: string } = {};
+        // for (let category of categories) {
+        //     guidMap[category.id] = category.guid;
+        // }
 
         const rootCategories: HabitCategory[] = [];
 
@@ -88,7 +98,7 @@ export class HabitsRepository {
             if (category.parentId === null)
                 rootCategories.push(castCategoryDict[category.guid]);
             else {
-                castCategoryDict[guidMap[category.parentId]].subCategories.push(castCategoryDict[category.guid])
+                castCategoryDict[category.parentId].subCategories.push(castCategoryDict[category.guid])
             }
         }
 
@@ -97,10 +107,13 @@ export class HabitsRepository {
         for (let habit of habits) {
             const castHabit: Habit = {
                 id: habit.guid,
-                name: habit.name
+                name: habit.name,
+                parentCategoryId: null
             };
-            if (habit.categoryId !== null)
-                castCategoryDict[guidMap[habit.categoryId]].habits.push(castHabit);
+            if (habit.categoryId !== null && habit.categoryId in castCategoryDict) {
+                castHabit.parentCategoryId = habit.categoryId;
+                castCategoryDict[habit.categoryId].habits.push(castHabit);
+            }
             else
                 rootHabits.push(castHabit);
         }
@@ -111,24 +124,86 @@ export class HabitsRepository {
         };
     }
 
-    public async createHabit(habit: Habit): Promise<Habit> {
+    public async createHabit(habit: Habit, userId: string): Promise<Habit> {
         const sql = `
             INSERT INTO Habit (
                 HabitGuid
                 , Name
+                , HabitCategoryId
+                , UserId
             )
             VALUES (
                 $guid
                 , $name
+                , (
+                    SELECT HC.HabitCategoryId
+                    FROM HabitCategory HC
+                        JOIN User U
+                            ON HC.UserId = U.UserId
+                    WHERE HC.HabitCategoryGuid = $categoryId
+                        AND U.UserGuid = $userId
+                        AND HC.IsDeleted = 0
+                )
+                , (
+                    SELECT U.UserId
+                    FROM User U
+                    WHERE U.UserGuid = $userId
+                        AND U.IsDeleted = 0
+                )
             )
         `;
         const uuid = newUUID();
         console.log("Inserting habit");
-        await this.dao.run(sql, { "$guid": uuid, "$name": habit.name });
+        await this.dao.run(sql, {
+            "$guid": uuid,
+            "$name": habit.name,
+            "$userId": userId,
+            "$categoryId": habit.parentCategoryId ?? ''
+        });
         
         return {
             ...habit,
             id: uuid
+        };
+    }
+
+    public async createCategory(category: HabitCategory, userId: string): Promise<HabitCategory> {
+        const sql = `
+            INSERT INTO HabitCategory (
+                HabitCategoryGuid
+                , Name
+                , UserId
+                , ParentCategoryId
+            )
+            VALUES (
+                $guid
+                , $name
+                , (
+                    SELECT U.UserId
+                    FROM User U
+                    WHERE U.UserGuid = $userId
+                        AND U.IsDeleted = 0
+                )
+                , (
+                    SELECT HC.HabitCategoryId
+                    FROM HabitCategory HC
+                    WHERE HC.HabitCategoryGuid = $parentCategoryId
+                        AND HC.IsDeleted = 0
+                )
+            );
+        `;
+        const id = newUUID();
+        await this.dao.run(sql, {
+            '$guid': id,
+            '$name': category.name,
+            '$userId': userId,
+            '$parentCategoryId': category.parentCategoryId ?? ''
+        });
+        return {
+            ...category,
+            id: id,
+            habits: [],
+            subCategories: []
         };
     }
 }

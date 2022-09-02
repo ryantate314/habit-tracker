@@ -10,6 +10,7 @@ export class HabitsController {
         this.getCategories = this.getCategories.bind(this);
         this.get = this.get.bind(this);
         this.createHabit = this.createHabit.bind(this);
+        this.createCategory = this.createCategory.bind(this);
     }
 
     public async getCategories(request: Request, response: Response): Promise<void> {
@@ -41,13 +42,30 @@ export class HabitsController {
     public async createHabit(request: Request, response: Response): Promise<void> {
 
         const habit: Habit = request.body;
+        console.log("query", request.query);
+        const categoryId: string | undefined = <string>request.query.categoryId;
 
         try {
-            const newHabit = await this.habitRepo.createHabit(habit);
+            const newHabit = await this.habitRepo.createHabit(habit, request.user!.id);
             response.send(newHabit);
         }
         catch (ex) {
             console.error("Error creating habit", ex);
+            response.status(500)
+                .send();
+        }
+    }
+
+    public async createCategory(request: Request, response: Response): Promise<void> {
+
+        const category: HabitCategory = request.body;
+
+        try {
+            const newCategory = await this.habitRepo.createCategory(category, request.user!.id);
+            response.send(newCategory);
+        }
+        catch (ex) {
+            console.error("Error creating habit category", ex);
             response.status(500)
                 .send();
         }
