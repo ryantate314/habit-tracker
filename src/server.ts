@@ -63,6 +63,7 @@ class Server {
         this.app.get("/api/v1/habit-categories", endpoint(habitsController.getCategories));
         this.app.post("/api/v1/habits", endpoint(habitsController.createHabit));
         this.app.post("/api/v1/habit-categories", endpoint(habitsController.createCategory));
+        this.app.post("/api/v1/habit-instances", endpoint(habitsController.logInstance));
     }
 
     public start = async (port: number) => {

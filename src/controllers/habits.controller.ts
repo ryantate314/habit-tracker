@@ -11,6 +11,7 @@ export class HabitsController {
         this.get = this.get.bind(this);
         this.createHabit = this.createHabit.bind(this);
         this.createCategory = this.createCategory.bind(this);
+        this.logInstance = this.logInstance.bind(this);
     }
 
     public async getCategories(request: Request, response: Response): Promise<void> {
@@ -66,6 +67,20 @@ export class HabitsController {
         }
         catch (ex) {
             console.error("Error creating habit category", ex);
+            response.status(500)
+                .send();
+        }
+    }
+
+    public async logInstance(request: Request, response: Response): Promise<void> {
+        const instance: HabitInstance = request.body;
+
+        try {
+            await this.habitRepo.logInstance(instance);
+            response.send();
+        }
+        catch (ex) {
+            console.error("Error creating habit instance", ex);
             response.status(500)
                 .send();
         }

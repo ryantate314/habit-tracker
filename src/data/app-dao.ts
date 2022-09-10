@@ -73,6 +73,19 @@ export class AppDAO {
             );
         `;
         await this.run(actionSql);
+
+        const habitInstanceSql = `
+            CREATE TABLE IF NOT EXISTS HabitInstance (
+                HabitInstanceId INTEGER PRIMARY KEY AUTOINCREMENT,
+                HabitInstanceGuid CHARACTER(36) NOT NULL UNIQUE,
+                HabitId INTEGER NOT NULL,
+                InstanceDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                IsDeleted BIT NOT NULL DEFAULT 0,
+                CONSTRAINT FK_HabitId_Habit_HabitId
+                    FOREIGN KEY (HabitId) REFERENCES Habit (HabitId)
+            );
+        `;
+        await this.run(habitInstanceSql);
     }
 
     public run(sql: string, params?: { [key: string]: string }): Promise<void> {

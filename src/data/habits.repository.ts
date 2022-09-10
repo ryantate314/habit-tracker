@@ -3,12 +3,14 @@ import { HabitInstance } from "../models/habit-instance.model";
 import { Habit, HabitCategory, RootCategory } from "../models/habit.model";
 import { AppDAO } from "./app-dao";
 import { v4 as newUUID} from 'uuid';
+import { HabitRoot } from "../models/habit-root.model";
 
 interface DataHabitCategory {
     id: number;
     guid: string;
     name: string;
-    parentId: string | null
+    color: string | null;
+    parentId: string | null;
 }
 
 interface DataHabit {
@@ -16,6 +18,7 @@ interface DataHabit {
     guid: string;
     name: string;
     categoryId: string | null;
+    numInstancesToday: number;
 }
 
 export class HabitsRepository {
@@ -34,7 +37,15 @@ export class HabitsRepository {
                 H.HabitId AS id,
                 H.HabitGuid AS guid,
                 H.Name AS name,
-                HC.HabitCategoryGuid AS categoryId
+                HC.HabitCategoryGuid AS categoryId,
+                (
+                    SELECT
+                        COUNT(1)
+                    FROM HabitInstance HI
+                    WHERE H.HabitId = HI.HabitId
+                        AND CAST(HI.InstanceDate AS DATE) = CAST(CURRENT_TIMESTAMP AS DATE)
+                        AND HI.IsDeleted = 0
+                ) AS numInstancesToday
             FROM Habit H
                 JOIN User U
                     ON H.UserId = H.UserId
@@ -48,7 +59,7 @@ export class HabitsRepository {
         return this.dao.all<DataHabit>(sql, { $userId: userId });
     }
 
-    public async getCategories(userId: string): Promise<RootCategory> {
+    public async getCategories(userId: string): Promise<HabitRoot> {
         const categories = await this.getCategories_(userId);
         const habits = await this.getHabits_(userId);
 
@@ -75,10 +86,11 @@ export class HabitsRepository {
         return this.dao.all<DataHabitCategory>(sql, { $userId: userId });
     }
 
-    private organizeCategories(categories: DataHabitCategory[], habits: DataHabit[]): RootCategory {
+    private organizeCategories(categories: DataHabitCategory[], habits: DataHabit[]): HabitRoot {
         const castCategories: HabitCategory[] = categories.map(x => ({
             id: x.guid,
             name: x.name,
+            color: x.color,
             parentCategoryId: x.parentId,
             habits: [],
             subCategories: []
@@ -87,40 +99,43 @@ export class HabitsRepository {
         for (let category of castCategories)
             castCategoryDict[category.id] = category;
 
-        // const guidMap: { [key: number]: string } = {};
-        // for (let category of categories) {
-        //     guidMap[category.id] = category.guid;
-        // }
-
         const rootCategories: HabitCategory[] = [];
 
         for (let category of categories) {
+            // Categories at the root level
             if (category.parentId === null)
                 rootCategories.push(castCategoryDict[category.guid]);
             else {
-                castCategoryDict[category.parentId].subCategories.push(castCategoryDict[category.guid])
+                castCategoryDict[category.parentId].subCategories.push(category.guid)
             }
         }
 
         const rootHabits: Habit[] = [];
+        const habitDictionary: {[key: string]: Habit} = {};
 
         for (let habit of habits) {
             const castHabit: Habit = {
                 id: habit.guid,
                 name: habit.name,
+                numInstancesToday: habit.numInstancesToday,
                 parentCategoryId: null
             };
+            habitDictionary[castHabit.id] = castHabit;
             if (habit.categoryId !== null && habit.categoryId in castCategoryDict) {
                 castHabit.parentCategoryId = habit.categoryId;
-                castCategoryDict[habit.categoryId].habits.push(castHabit);
+                castCategoryDict[habit.categoryId].habits.push(castHabit.id);
             }
             else
                 rootHabits.push(castHabit);
         }
 
         return {
-            subCategories: rootCategories,
-            habits: rootHabits
+            habitDictionary: habitDictionary,
+            categoryDictionary: castCategoryDict,
+            root: {
+                subCategories: rootCategories.map(x => x.id),
+                habits: rootHabits.map(x => x.id)
+            }
         };
     }
 
@@ -205,5 +220,29 @@ export class HabitsRepository {
             habits: [],
             subCategories: []
         };
+    }
+
+    public async logInstance(instance: HabitInstance): Promise<void> {
+        const sql = `
+            INSERT INTO HabitInstance (
+                HabitInstanceGuid
+                , HabitId
+            )
+            VALUES (
+                $guid
+                , (
+                    SELECT
+                        H.HabitId
+                    FROM Habit H
+                    WHERE H.HabitGUid = $habitId
+                        AND H.IsDeleted = 0
+                )
+            )
+        `;
+        const guid = newUUID();
+        await this.dao.run(sql, {
+            '$guid': guid,
+            '$habitId': instance.habitId
+        });
     }
 }
