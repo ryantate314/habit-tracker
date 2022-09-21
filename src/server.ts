@@ -42,7 +42,10 @@ class Server {
         this.app.use(bodyParser.urlencoded({ extended:true }));
         this.app.use(bodyParser.json({ limit: '1mb' })); // 100kb default
         this.app.use(cors({
-            origin: "http://localhost:4200"
+            origin: [
+                "http://localhost:4200",
+                "https://ryantate314.ddns.net"
+            ]
         }));
 
         if (this.environment.SECURE_ENDPOINTS != "false") {
