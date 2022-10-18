@@ -12,6 +12,8 @@ export class HabitsController {
         this.createHabit = this.createHabit.bind(this);
         this.createCategory = this.createCategory.bind(this);
         this.logInstance = this.logInstance.bind(this);
+        this.getInstances = this.getInstances.bind(this);
+        this.deleteLastInstance = this.deleteLastInstance.bind(this);
     }
 
     public async getCategories(request: Request, response: Response): Promise<void> {
@@ -43,7 +45,6 @@ export class HabitsController {
     public async createHabit(request: Request, response: Response): Promise<void> {
 
         const habit: Habit = request.body;
-        console.log("query", request.query);
         const categoryId: string | undefined = <string>request.query.categoryId;
 
         try {
@@ -81,6 +82,48 @@ export class HabitsController {
         }
         catch (ex) {
             console.error("Error creating habit instance", ex);
+            response.status(500)
+                .send();
+        }
+    }
+
+    public async getInstances(request: Request, response: Response): Promise<void> {
+        if (!request.query.startDate || !request.query.endDate) {
+            response.status(400)
+                .send();
+            return;
+        }
+            
+        const userId = request.user!.id;
+        const startDate = new Date(request.query.startDate!.toString());
+        const endDate = new Date(request.query.endDate!.toString());
+
+        try {
+            const instances = await this.habitRepo.getInstances(userId, startDate, endDate);
+            response.send(instances);
+        }
+        catch (ex) {
+            console.error(`Error getting habit instances for user ${userId}`, ex);
+            response.status(500)
+                .send();
+        }
+    }
+
+    public async deleteLastInstance(request: Request, response: Response): Promise<void> {
+        const habitId = request.query.habitId?.toString();
+
+        if (!habitId) {
+            response.status(400)
+                .send();
+            return;
+        }
+
+        try {
+            await this.habitRepo.deleteLastInstance(habitId);
+            response.send();
+        }
+        catch (ex) {
+            console.error(`Error deleting last habit instance for habit ${habitId}`, ex);
             response.status(500)
                 .send();
         }

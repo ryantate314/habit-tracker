@@ -43,7 +43,7 @@ export class HabitsRepository {
                         COUNT(1)
                     FROM HabitInstance HI
                     WHERE H.HabitId = HI.HabitId
-                        AND CAST(HI.InstanceDate AS DATE) = CAST(CURRENT_TIMESTAMP AS DATE)
+                        AND DATE(HI.InstanceDate) = DATE(CURRENT_TIMESTAMP)
                         AND HI.IsDeleted = 0
                 ) AS numInstancesToday
             FROM Habit H
@@ -234,7 +234,7 @@ export class HabitsRepository {
                     SELECT
                         H.HabitId
                     FROM Habit H
-                    WHERE H.HabitGUid = $habitId
+                    WHERE H.HabitGuid = $habitId
                         AND H.IsDeleted = 0
                 )
             )
@@ -243,6 +243,71 @@ export class HabitsRepository {
         await this.dao.run(sql, {
             '$guid': guid,
             '$habitId': instance.habitId
+        });
+    }
+
+    public async getInstances(userId: string, startDate: Date, endDate: Date): Promise<HabitInstance[]> {
+        const sql = `
+            SELECT
+                HI.HabitInstanceGuid AS id
+                , HI.InstanceDate AS instanceDate
+                , H.HabitGuid AS habitId
+                , H.Name as habitName
+            FROM HabitInstance HI
+                JOIN Habit H
+                    ON HI.HabitId = H.HabitId
+                JOIN User U
+                    ON H.UserId = U.UserId
+            WHERE U.UserGuid = @userId
+                AND HI.IsDeleted = 0
+                AND HI.InstanceDate >= @startDate
+                AND HI.InstanceDate < @endDate
+        `;
+
+        const instances = await this.dao.all<HabitInstance>(sql, {
+            '@userId': userId,
+            '@startDate': startDate.toISOString(),
+            '@endDate': endDate.toISOString()
+        });
+
+        return instances.map(instance => ({
+            ...instance,
+            instanceDate: <Date>this.sqlDateToUtcDate(instance.instanceDate)
+        }));
+    }
+
+    private sqlDateToUtcDate(sqlDate: string | Date | null): Date | null {
+        if (sqlDate === null)
+            return null;
+
+        const saniDate = (<string>sqlDate).replace(' ', 'T') + "Z";
+        return new Date(saniDate);
+    }
+
+    public deleteLastInstance(habitId: string): Promise<void> {
+        const sql = `
+            UPDATE HabitInstance
+                SET IsDeleted = 1
+            WHERE HabitInstanceId = (
+                    SELECT
+                        SubHI.HabitInstanceId
+                    FROM (
+                        SELECT
+                            SubSubHI.HabitInstanceId
+                            , ROW_NUMBER() OVER (PARTITION BY SubSubH.HabitId ORDER BY SubSubHI.InstanceDate DESC) AS RowNum
+                        FROM Habit SubSubH
+                            JOIN HabitInstance SubSubHI
+                                ON SubSubH.HabitId = SubSubHI.HabitId
+                        WHERE SubSubH.HabitGuid = @habitId
+                            AND DATE(SubSubHI.InstanceDate) = DATE(CURRENT_TIMESTAMP)
+                            AND SubSubHI.IsDeleted = 0
+                    ) SubHI
+                    WHERE SubHI.RowNum = 1
+                )
+        `;
+
+        return this.dao.run(sql, {
+            '@habitId': habitId
         });
     }
 }
