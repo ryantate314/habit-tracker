@@ -3,9 +3,12 @@ import { Environment } from '../models/environment.model'
 import { NextFunction, Request, Response } from 'express';
 import { UserPrinciple } from '../models/user-principle.model';
 import { OAuth2Client } from 'google-auth-library';
+import { Token } from '../models/token';
+
+const token_cookie_name = "auth_token";
 
 export interface TokenPayload {
-    userId: string;
+    sub: string;
 }
 
 export class AuthService {
@@ -14,6 +17,12 @@ export class AuthService {
     constructor(private environment: Environment) {
         this.oauth2Client = new OAuth2Client(environment.GOOGLE_CLIENT_ID);
     }
+
+    
+    public get isDev() : boolean {
+        return this.environment.ENVIRONMENT === 'Dev';
+    }
+    
 
     public routeGuard(ignoreUrls: string[] = []) {
         return (request: Request, response: Response, next: NextFunction) => {
@@ -31,12 +40,10 @@ export class AuthService {
             if (request.headers.authorization && /Bearer .+/.test(request.headers.authorization)) {
                 const token = request.headers.authorization.split(" ")[1];
                 try {
-                    const parsedToken = <JwtPayload>this.parseToken(token);
-                    if (parsedToken) {
-                        console.log("User " + parsedToken.userId + " authenticated");
-                        request.user = {
-                            id: parsedToken.userId
-                        }
+                    const user = this.parseToken(token);
+                    if (user) {
+                        console.log("User " + user.id + " authenticated");
+                        request.user = user
                         authenticated = true;
                     }
                 }
@@ -60,17 +67,71 @@ export class AuthService {
         return this.environment.JWT_KEY;
     }
 
-    public generateToken(payload: TokenPayload): string {
-        return jwt.sign(payload, this.JWT_KEY, {
-            expiresIn: 30 * 60
+    public generateToken(user: UserPrinciple): Token {
+        const payload: TokenPayload = {
+            sub: user.id
+        };
+        const token = jwt.sign(payload, this.JWT_KEY, {
+            expiresIn: this.environment.JWT_LIFETIME * 60
+        });
+        return {
+            token: token,
+            expiresIn: this.environment.JWT_LIFETIME * 60
+        };
+    }
+
+    public generateRefreshToken(user: UserPrinciple): Token {
+        const payload: TokenPayload = {
+            sub: user.id
+        };
+        const token = jwt.sign(payload, this.environment.JWT_REFRESH_KEY, {
+            expiresIn: this.environment.JWT_REFRESH_LIFETIME * 60
+        });
+        return {
+            token: token,
+            expiresIn: this.environment.JWT_REFRESH_LIFETIME * 60
+        };
+    }
+
+    private parseToken(token: string): UserPrinciple {
+        const payload = <TokenPayload>jwt.verify(token, this.JWT_KEY);
+        return {
+            id: payload.sub
+        };
+    }
+
+    public validateRequest(request: Request): { token: string, user: UserPrinciple } | null {
+        const token = request.cookies[token_cookie_name];
+        if (!token)
+            return null;
+
+        try {
+            const user = this.parseToken(token);
+
+            return {
+                token: token,
+                user: user
+            };
+        }
+        catch (ex) {
+            console.log("Authentication error", ex);
+            return null;
+        }
+    }
+
+    public addTokenCookie(response: Response, token: string, expiresIn: number) {
+        const expirationDate = new Date();
+        expirationDate.setSeconds(expirationDate.getSeconds() + expiresIn);
+
+        response.cookie(token_cookie_name, token, {
+            httpOnly: true,
+            secure: !this.isDev,
+            sameSite: 'strict',
+            expires: expirationDate
         });
     }
 
-    private parseToken(token: string) {
-        return jwt.verify(token, this.JWT_KEY);
-    }
-
-    public async validateLoginToken(token: string) {
+    public async validateThirdPartyToken(token: string) {
         const result = (await this.oauth2Client.verifyIdToken({
             idToken: token,
             audience: this.environment.GOOGLE_CLIENT_ID

@@ -10,6 +10,7 @@ import { UsersRepository } from './data/users.repository';
 import { HabitsRepository } from './data/habits.repository';
 import cors from 'cors';
 import { handleErrors } from './errorHandler';
+import cookieParser from 'cookie-parser';
 
 function endpoint(action: RequestHandler): RequestHandler {
     return (req: Request, res: Response, next: NextFunction) => {
@@ -41,16 +42,19 @@ class Server {
     private config() {
         this.app.use(bodyParser.urlencoded({ extended:true }));
         this.app.use(bodyParser.json({ limit: '1mb' })); // 100kb default
+        this.app.use(cookieParser());
         this.app.use(cors({
             origin: [
                 "http://localhost:4200",
                 "https://ryantate314.ddns.net"
-            ]
+            ],
+            credentials: true
         }));
 
         if (this.environment.SECURE_ENDPOINTS != "false") {
             this.app.use(this.authService.routeGuard([
-                '/api/v1/users/login'
+                '/api/v1/users/login',
+                '/api/v1/users/refresh'
             ]));
         }
     }
@@ -60,6 +64,7 @@ class Server {
         const usersController = new UsersController(this.authService, userRepo);
 
         this.app.post("/api/v1/users/login", endpoint(usersController.login));
+        this.app.post("/api/v1/users/refresh", endpoint(usersController.refreshToken));
 
         const habitRepo = new HabitsRepository(this.dao);
         const habitsController = new HabitsController(habitRepo);
@@ -70,7 +75,6 @@ class Server {
         this.app.get("/api/v1/habit-instances", endpoint(habitsController.getInstances));
         this.app.post("/api/v1/habit-instances", endpoint(habitsController.logInstance));
         this.app.delete("/api/v1/habit-instances/last", endpoint(habitsController.deleteLastInstance));
-
     }
 
     public start = async (port: number) => {
