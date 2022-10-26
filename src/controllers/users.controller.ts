@@ -44,8 +44,7 @@ export class UsersController {
                     id: user.id!
                 }
 
-                const refreshToken = this.authService.generateRefreshToken(userPrinciple);
-                this.authService.addTokenCookie(response, refreshToken.token, refreshToken.expiresIn);
+                this.authService.generateRefreshToken(userPrinciple, response);
 
                 const token = this.authService.generateToken(userPrinciple);
 
@@ -68,14 +67,13 @@ export class UsersController {
     }
 
     public async refreshToken(request: Request, response: Response): Promise<void> {
-        const user = this.authService.validateRequest(request);
+        const validRequest = this.authService.validateRequest(request);
 
-        if (user) {
+        if (validRequest) {
             // Rotate the refresh token on every refresh request.
-            const refreshToken = this.authService.generateRefreshToken(user.user);
-            this.authService.addTokenCookie(response, refreshToken.token, refreshToken.expiresIn);
+            this.authService.generateRefreshToken(validRequest.user, response);
 
-            const token = this.authService.generateToken(user.user);
+            const token = this.authService.generateToken(validRequest.user);
             response.send({
                 token: token.token,
                 expiresIn: token.expiresIn

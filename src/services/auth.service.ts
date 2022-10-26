@@ -5,7 +5,7 @@ import { UserPrinciple } from '../models/user-principle.model';
 import { OAuth2Client } from 'google-auth-library';
 import { Token } from '../models/token';
 
-const token_cookie_name = "auth_token";
+const refresh_token_cookie_name = "auth_token";
 
 export interface TokenPayload {
     sub: string;
@@ -40,7 +40,7 @@ export class AuthService {
             if (request.headers.authorization && /Bearer .+/.test(request.headers.authorization)) {
                 const token = request.headers.authorization.split(" ")[1];
                 try {
-                    const user = this.parseToken(token);
+                    const user = this.parseAuthToken(token);
                     if (user) {
                         console.log("User " + user.id + " authenticated");
                         request.user = user
@@ -80,33 +80,43 @@ export class AuthService {
         };
     }
 
-    public generateRefreshToken(user: UserPrinciple): Token {
+    public generateRefreshToken(user: UserPrinciple, response: Response): void {
         const payload: TokenPayload = {
             sub: user.id
         };
+        const expiresIn = this.environment.JWT_REFRESH_LIFETIME * 60;
         const token = jwt.sign(payload, this.environment.JWT_REFRESH_KEY, {
-            expiresIn: this.environment.JWT_REFRESH_LIFETIME * 60
+            expiresIn: expiresIn
         });
-        return {
-            token: token,
-            expiresIn: this.environment.JWT_REFRESH_LIFETIME * 60
-        };
+        this.addTokenCookie(response, token, expiresIn);
     }
 
-    private parseToken(token: string): UserPrinciple {
+    private parseAuthToken(token: string): UserPrinciple {
         const payload = <TokenPayload>jwt.verify(token, this.JWT_KEY);
         return {
             id: payload.sub
         };
     }
 
+    private parseRefreshToken(token: string): UserPrinciple {
+        const payload = <TokenPayload>jwt.verify(token, this.environment.JWT_REFRESH_KEY);
+        return {
+            id: payload.sub
+        };
+    }
+
+    /**
+     * Validates the refresh token on the provided request.
+     * @param request 
+     * @returns 
+     */
     public validateRequest(request: Request): { token: string, user: UserPrinciple } | null {
-        const token = request.cookies[token_cookie_name];
+        const token = request.cookies[refresh_token_cookie_name];
         if (!token)
             return null;
 
         try {
-            const user = this.parseToken(token);
+            const user = this.parseRefreshToken(token);
 
             return {
                 token: token,
@@ -119,11 +129,11 @@ export class AuthService {
         }
     }
 
-    public addTokenCookie(response: Response, token: string, expiresIn: number) {
+    private addTokenCookie(response: Response, token: string, expiresIn: number) {
         const expirationDate = new Date();
         expirationDate.setSeconds(expirationDate.getSeconds() + expiresIn);
 
-        response.cookie(token_cookie_name, token, {
+        response.cookie(refresh_token_cookie_name, token, {
             httpOnly: true,
             secure: !this.isDev,
             sameSite: 'strict',
