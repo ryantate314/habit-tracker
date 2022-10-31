@@ -7,5 +7,5 @@ export interface Environment {
     JWT_REFRESH_KEY: string;
     JWT_REFRESH_LIFETIME: number;
     GOOGLE_CLIENT_ID: string;
-    ENVIRONMENT: string;
+    NODE_ENV: string;
 }

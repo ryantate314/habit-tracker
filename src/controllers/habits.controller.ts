@@ -113,6 +113,7 @@ export class HabitsController {
         const habitId = request.query.habitId?.toString();
 
         if (!habitId) {
+            console.log("Bad request: " + request.query.toString());
             response.status(400)
                 .send();
             return;

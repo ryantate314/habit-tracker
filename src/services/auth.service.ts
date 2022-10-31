@@ -18,11 +18,9 @@ export class AuthService {
         this.oauth2Client = new OAuth2Client(environment.GOOGLE_CLIENT_ID);
     }
 
-    
     public get isDev() : boolean {
-        return this.environment.ENVIRONMENT === 'Dev';
+        return this.environment.NODE_ENV === 'development';
     }
-    
 
     public routeGuard(ignoreUrls: string[] = []) {
         return (request: Request, response: Response, next: NextFunction) => {
