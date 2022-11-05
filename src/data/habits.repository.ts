@@ -24,6 +24,7 @@ interface DataHabit {
 export class HabitsRepository {
     
     
+    
 
     constructor(private dao: AppDAO) {}
 
@@ -304,6 +305,19 @@ export class HabitsRepository {
                     ) SubHI
                     WHERE SubHI.RowNum = 1
                 )
+        `;
+
+        return this.dao.run(sql, {
+            '@habitId': habitId
+        });
+    }
+
+    public deleteHabit(habitId: string): Promise<void> {
+        const sql = `
+            UPDATE Habit
+                SET IsDeleted = 1
+            WHERE HabitGuid = @habitId
+                AND IsDeleted = 0;
         `;
 
         return this.dao.run(sql, {

@@ -14,6 +14,7 @@ export class HabitsController {
         this.logInstance = this.logInstance.bind(this);
         this.getInstances = this.getInstances.bind(this);
         this.deleteLastInstance = this.deleteLastInstance.bind(this);
+        this.deleteHabit = this.deleteHabit.bind(this);
     }
 
     public async getCategories(request: Request, response: Response): Promise<void> {
@@ -99,6 +100,7 @@ export class HabitsController {
         const endDate = new Date(request.query.endDate!.toString());
 
         try {
+            console.log("Getting instances from " + startDate + " to " + endDate);
             const instances = await this.habitRepo.getInstances(userId, startDate, endDate);
             response.send(instances);
         }
@@ -113,7 +115,6 @@ export class HabitsController {
         const habitId = request.query.habitId?.toString();
 
         if (!habitId) {
-            console.log("Bad request: " + request.query.toString());
             response.status(400)
                 .send();
             return;
@@ -125,6 +126,26 @@ export class HabitsController {
         }
         catch (ex) {
             console.error(`Error deleting last habit instance for habit ${habitId}`, ex);
+            response.status(500)
+                .send();
+        }
+    }
+
+    public async deleteHabit(request: Request, response: Response): Promise<void> {
+        const habitId = request.query.habitId?.toString();
+
+        if (!habitId) {
+            response.status(400)
+                .send();
+            return;
+        }
+
+        try {
+            await this.habitRepo.deleteHabit(habitId);
+            response.send();
+        }
+        catch (ex) {
+            console.error(`Error deleting habit ${habitId}`, ex);
             response.status(500)
                 .send();
         }

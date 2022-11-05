@@ -70,6 +70,7 @@ class Server {
         const habitsController = new HabitsController(habitRepo);
         this.app.get("/api/v1/habit-categories", endpoint(habitsController.getCategories));
         this.app.post("/api/v1/habits", endpoint(habitsController.createHabit));
+        this.app.delete("/api/v1/habits", endpoint(habitsController.deleteHabit));
         this.app.post("/api/v1/habit-categories", endpoint(habitsController.createCategory));
 
         this.app.get("/api/v1/habit-instances", endpoint(habitsController.getInstances));
