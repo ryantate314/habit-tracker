@@ -61,7 +61,7 @@ class Server {
 
     private routerConfig() {
         const userRepo = new UsersRepository(this.dao);
-        const usersController = new UsersController(this.authService, userRepo);
+        const usersController = new UsersController(this.authService, userRepo, this.environment);
 
         this.app.post("/api/v1/users/login", endpoint(usersController.login));
         this.app.post("/api/v1/users/refresh", endpoint(usersController.refreshToken));

@@ -8,4 +8,5 @@ export interface Environment {
     JWT_REFRESH_LIFETIME: number;
     GOOGLE_CLIENT_ID: string;
     NODE_ENV: string;
+    CAN_CREATE_USERS: string;
 }

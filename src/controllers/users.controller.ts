@@ -1,11 +1,12 @@
 import { Request, Response } from "express";
 import { UsersRepository } from "../data/users.repository";
+import { Environment } from "../models/environment.model";
 import { UserPrinciple } from "../models/user-principle.model";
 import { AuthService } from "../services/auth.service";
 
 export class UsersController {
 
-    constructor(private authService: AuthService, private userRepo: UsersRepository) {
+    constructor(private authService: AuthService, private userRepo: UsersRepository, private environment: Environment) {
         this.login = this.login.bind(this);
         this.refreshToken = this.refreshToken.bind(this);
     }
@@ -34,10 +35,17 @@ export class UsersController {
             if (googleUser) {
                 let user = await this.userRepo.getUserBySSOId(googleUser.ssoId);
                 if (user == null) {
-                    user = await this.userRepo.create({
-                        email: googleUser.email!,
-                        ssoId: googleUser.ssoId
-                    });
+                    if (this.environment.CAN_CREATE_USERS !== "false") {
+                        user = await this.userRepo.create({
+                            email: googleUser.email!,
+                            ssoId: googleUser.ssoId
+                        });
+                    }
+                    else {
+                        console.log("User attempted to create a new account: " + googleUser.email);
+                        response.status(401)
+                            .end();
+                    }
                 }
 
                 const userPrinciple: UserPrinciple = {
