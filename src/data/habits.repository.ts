@@ -49,7 +49,7 @@ export class HabitsRepository {
                 ) AS numInstancesToday
             FROM Habit H
                 JOIN User U
-                    ON H.UserId = H.UserId
+                    ON H.UserId = U.UserId
                 LEFT JOIN HabitCategory HC
                     ON H.HabitCategoryId = HC.HabitCategoryId
                         AND HC.IsDeleted = 0
